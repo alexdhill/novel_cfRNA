@@ -1,0 +1,3 @@
+[submodule "crater"]
+	path = crater
+	url = https://github.com/alexdhill/crater
