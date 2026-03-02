@@ -9,9 +9,9 @@ Liquid biopsies detect disease noninvasively by profiling cell-free nucleic acid
 
 The analysis, panels, and figures generated in this project are all available and annotated in `notebooks/analysis.rmd` notebook. The RMarkdown file has a few necessary code chunks that read in the data and setup the environment, and all subsequent panels generate a single (or a few identical) panel(s). As long as the required libraries exist the notebooks should be able to be run front to back relatively easily.
 
-#### TBD
+#### TODO
 
- - [ ] Add CRATER (as creater) submodule which contains a series of helper function in R for plotting and theming
+ - [X] Add CRATER (as creater) submodule which contains a series of helper function in R for plotting and theming
  - [X] Add conda yaml for replicable environment
 
 ### Citation
