@@ -43,6 +43,80 @@ barretts_palette <- c(
         "Mitochondrial", "Other", "Novel Gene"
     ))
 
+theme_cell <- function() {
+    return(
+        ggthemes::theme_foundation(
+            base_size = 6,
+            base_family = 'Arial'
+        ) +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(
+                size = 8,
+                color = "#282A36",
+                face = 'bold',
+                hjust = 0,
+                vjust = 0.5
+            ),
+            plot.background = ggplot2::element_blank(),
+            plot.tag = ggplot2::element_text(
+                size = 10,
+                face = "bold",
+                color = "#282A36"
+            ),
+            plot.margin = ggplot2::margin(1, 1, 1, 1, unit = "pt"),
+            panel.background = ggplot2::element_blank(),
+            panel.border = ggplot2::element_blank(),
+            panel.grid.major = ggplot2::element_blank(),
+            panel.grid.minor = ggplot2::element_blank(),
+            axis.line = ggplot2::element_line(color = "#282A36"),
+            axis.line.x = NULL,
+            axis.line.y = NULL,
+            axis.text = ggplot2::element_text(size = 6, color = "#282A36"),
+            axis.text.x = ggplot2::element_text(
+                margin = ggplot2::margin(t = 0.5),
+                vjust = 1, color = "#282A36"
+            ),
+            axis.text.x.top = ggplot2::element_text(
+                margin = ggplot2::margin(b = 0.5),
+                vjust = 0, color = "#282A36"
+            ),
+            axis.text.y = ggplot2::element_text(
+                margin = ggplot2::margin(r = 0.25),
+                hjust = 1, color = "#282A36"
+            ),
+            axis.text.y.right = ggplot2::element_text(
+                margin = ggplot2::margin(l = 0.25),
+                hjust = 0, color = "#282A36"
+            ),
+            axis.ticks = ggplot2::element_line(),
+            axis.ticks.length = ggplot2::unit(2, "pt"),
+            axis.ticks.length.x = NULL,
+            axis.ticks.length.x.top = NULL,
+            axis.ticks.length.x.bottom = NULL,
+            axis.ticks.length.y = NULL,
+            axis.ticks.length.y.left = NULL,
+            axis.ticks.length.y.right = NULL,
+            strip.text = ggplot2::element_text(
+                size = 6, face = "bold", color = "#282A36"
+            ),
+            strip.background = ggplot2::element_blank(),
+            strip.placement = "outside",
+            legend.spacing = ggplot2::unit(0, "pt"),
+            legend.title = ggplot2::element_text(
+                size = 6, face="italic", color = "#282A36"
+            ),
+            legend.text = ggplot2::element_text(
+                size = 6, face="bold", color = "#282A36"
+            ),
+            legend.justification = c(0.1, 0.75),
+            legend.box.just = "right",
+            legend.box.spacing = ggplot2::unit(-0.25, "pt"),
+            legend.position = "right",
+            legend.background = ggplot2::element_blank()
+        )
+    )
+}
+
 # Analysis parameters
 pval_thresh <- 0.05
 logFC_thresh <- 1
@@ -55,8 +129,8 @@ min_expr_frac <- 0.25
 ## Data
 ```{r data}
 ## Read in H5 files
-novel_se <- creater::load_counts("data/novel")
-gencode_se <- creater::load_counts("data/gencode")
+novel_se <- creater::load_counts("data/counts/short_read/novel")
+gencode_se <- creater::load_counts("data/counts/short_read/gencode")
 
 ## Read in metadata
 metadata <- readr::read_csv("data/metadata.csv", show_col_types = FALSE, progress = FALSE) %>%
@@ -306,7 +380,7 @@ fig1.panelBCD <- lapply(list('Protein coding', 'lncRNA', 'Novel Gene'), function
             fill = "Transcriptome",
             title = biotype
         ) +
-        creater::theme_create(base_size = 8) +
+        theme_cell() +
         ggplot2::theme(
             legend.position = "bottom",
             plot.title = ggplot2::element_text(hjust = 0.5)
@@ -318,12 +392,13 @@ fig1.panelBCD <- lapply(list('Protein coding', 'lncRNA', 'Novel Gene'), function
     )
     ggplot2::ggsave(
         filename = paste0("results/panels/figure1_panel", panels[[biotype]], ".pdf"),
-        plot = plot, width = 3, height = 3,
+        plot = plot, width = 5.8, height = 5.8, units = "cm",
         device = cairo_pdf
     )
     ggplot2::ggsave(
         filename = paste0("results/panels/figure1_panel", panels[[biotype]], ".png"),
-        plot = plot, width = 3, height = 3, dpi = 600
+        plot = plot, width = 5.8, height = 5.8, units = "cm",
+        dpi = 600
     )
     return(list(plot))
 }) %>%
@@ -352,7 +427,7 @@ fig1.panelE <- SummarizedExperiment::rowRanges(combined_se) %>%
         alpha = 1, color = 'white',
         scale = 1, rel_min_height = 0.0001,
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::scale_fill_manual(values = c(
         "TRUE" = unname(barretts_palette["Novel Gene"]),
         "FALSE" = "#666666"
@@ -377,13 +452,14 @@ fig1.panelE <- SummarizedExperiment::rowRanges(combined_se) %>%
 ggplot2::ggsave(
     filename = "results/panels/figure1_panelE.pdf",
     plot = fig1.panelE,
-    width = 3, height = 3,
+    width = 5.8, height = 5.8, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure1_panelE.png",
     plot = fig1.panelE,
-    width = 3, height = 3, dpi = 600
+    width = 5.8, height = 5.8, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -497,12 +573,18 @@ fig1.panelFGHI <- purrr::imap(list(
             'CT-enriched' = "#666666",
             'Not significant' = "lightgray"
         )) +
-        creater::theme_create(base_size = 8) +
+        theme_cell() +
         ggplot2::scale_y_continuous(expand = c(0,0)) +
+        ggplot2::scale_x_discrete(
+            breaks = c(
+                "1", "", "3", "", "5", "", "7", "", "9", "",
+                "11", "", "13", "", "15", "", "17", "19", "",
+                "21", "", "X", "Y"
+            )
+        ) +
         ggplot2::theme(
             legend.position = 'none',
-            axis.ticks.x = ggplot2::element_blank(),
-            axis.text.x = ggplot2::element_text(size = 5)
+            axis.ticks.x = ggplot2::element_blank()
         )
     ggplot2::ggsave(
         filename = paste0("results/panels/figure1_panel", panel, ".pdf"),
@@ -513,7 +595,7 @@ fig1.panelFGHI <- purrr::imap(list(
     ggplot2::ggsave(
         filename = paste0("results/panels/figure1_panel", panel, ".png"),
         plot = plot,
-        width = 5, height = 3, dpi = 600
+        width = 9.67, height = 5.8, dpi = 600
     )
     return(list(plot))
 }) %>%
@@ -532,7 +614,7 @@ fig1.panelA <- ggplot2::ggplot() +
         ) %>%
         ggplot2::annotation_custom()
     } +
-    creater::theme_create(base_size = 8)
+    theme_cell()
 figure1 <- patchwork::wrap_plots(list(
         patchwork::free(fig1.panelA),
         fig1.panelBCD,
@@ -541,20 +623,22 @@ figure1 <- patchwork::wrap_plots(list(
     )) +
     patchwork::plot_layout(
         guides = 'keep', tag_level = 'keep',
-        heights = c(2.75, 3, 3),
-        design = 'AAAA\nBBBB\nCDDD',
+        heights = c(2.8, 3, 3),
+        widths = c(1, 3),
+        design = 'AA\nBB\nCD',
     ) +
-    patchwork::plot_annotation(tag_levels = 'a')
+    patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
     filename = "results/figures/figure1.pdf",
     plot = figure1,
-    width = 9, height = 8.75,
+    width = 17.4, height = 17, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/figures/figure1.png",
     plot = figure1,
-    width = 9, height = 8.75, dpi = 600
+    width = 17.4, height = 17, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -611,13 +695,20 @@ fig2.panelAB <- lapply(list("BE", "EA"), function(numer) {
             breaks = names(barretts_palette)
         ) +
         ggplot2::labs(x="Log2FoldChange", y="-Log10 padj", color = "Gene biotype") +
-        creater::theme_create(base_size = 8) +
-        ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size=5, shape=15)))
+        theme_cell() +
+        ggplot2::guides(color = ggplot2::guide_legend(
+            override.aes = list(
+                size = 8, shape=15
+            )
+        )) +
+        ggplot2::theme(
+            legend.key.spacing.y = ggplot2::unit(-.16, "cm")
+        )
     panel_letter = c("BE" = "A", "EA" = "B")
     ggplot2::ggsave(
         filename = paste0("results/panels/figure2_panel", panel_letter[[numer]], ".pdf"),
         plot = de_res,
-        width = 4, height = 4,
+        width = 8.7, height = 5, units = "cm",
         device = cairo_pdf
     )
     ggplot2::ggsave(
@@ -626,22 +717,7 @@ fig2.panelAB <- lapply(list("BE", "EA"), function(numer) {
         width = 4, height = 4, dpi = 600
     )
     return(list(de_res))
-}) %>%
-do.call(c, .) %>%
-patchwork::wrap_plots() +
-patchwork::plot_layout(ncol = 2, guides = 'collect') +
-patchwork::plot_annotation(tag_levels = list(c('A', 'B')))
-ggplot2::ggsave(
-    filename = "results/panels/figure2_panelAB.pdf",
-    plot = fig2.panelAB,
-    width = 9, height = 2,
-    device = cairo_pdf
-)
-ggplot2::ggsave(
-    filename = "results/panels/figure2_panelAB.png",
-    plot = fig2.panelAB,
-    width = 9, height = 2
-)
+})
 ```
 
 ## Panel C: Disease upset
@@ -701,18 +777,18 @@ fig2.panelC <- dplyr::left_join(
         y = "Number of genes",
         fill = "Gene biotype"
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(legend.position = "none")
 ggplot2::ggsave(
     filename = "results/panels/figure2_panelC.pdf",
     plot = fig2.panelC,
-    width = 4, height = 2,
+    width = 8.7, height = 5,
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure2_panelC.png",
     plot = fig2.panelC,
-    width = 4, height = 2, dpi = 600
+    width = 8.7, height = 5, dpi = 600
 )
 ```
 
@@ -771,7 +847,7 @@ fig2.panelD <- dplyr::left_join(
         y = "Number of genes",
         fill = "Gene biotype"
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(legend.position = "none")
 ggplot2::ggsave(
     filename = "results/panels/figure2_panelD.pdf",
@@ -847,7 +923,7 @@ fig2.panelE <- DESeq2::counts(novel_dds, normalized = TRUE) %>%
         textsize = 3, tip_length = 0,
         test = 'wilcox.test', test.args = list(paired = TRUE)
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(legend.position = "none") +
     ggplot2::coord_cartesian(clip = 'off')
 ggplot2::ggsave(
@@ -890,7 +966,7 @@ treeorder <- function(hclust, values) {
 
         return(node)
     }
-    
+
     get_leaves <- function(node, hclust) {
         if (node < 0) return(-node)
 
@@ -952,7 +1028,7 @@ mito_heatmap <- mito_heatmap_data %>%
         limits = c(-max(abs(mito_matrix)), max(abs(mito_matrix))),
         name = "Z-Expression"
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(
         panel.grid = ggplot2::element_blank(),
         axis.title = ggplot2::element_blank(),
@@ -976,7 +1052,7 @@ mito_heatmap_col_annotations <- metadata %>%
         "EA" = "#D95F02"
     )) +
     ggplot2::labs(fill = "Condition") +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(
         axis.line.x = ggplot2::element_blank(),
         axis.line.y = ggplot2::element_blank(),
@@ -997,10 +1073,11 @@ mito_heatmap_row_dendro <- ggdendro::segment(mito_row_dendro) %>%
     ggplot2::geom_segment() +
     ggplot2::scale_y_continuous(expand = c(0,0.5)) +
     ggplot2::scale_x_continuous(transform = 'reverse') +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggdendro::theme_dendro() +
     ggplot2::theme(
         plot.margin = ggplot2::margin(t = -0.1, r = -0.1, b = -0.1, l = -0.1),
+        panel.spacing = ggplot2::unit(c(0,0,0,0), "cm"),
         plot.tag = ggplot2::element_blank()
     ) +
     ggplot2::labs(x = NULL, y = NULL)
@@ -1009,7 +1086,7 @@ mito_heatmap_col_dendro <- ggdendro::segment(mito_col_dendro) %>%
     ggplot2::ggplot(ggplot2::aes(x = x, y = y, xend = xend, yend = yend)) +
     ggplot2::geom_segment() +
     ggplot2::scale_x_continuous(expand = c(0,0.5)) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggdendro::theme_dendro() +
     ggplot2::theme(
         plot.margin = ggplot2::margin(t = -0.1, r = -0.1, b = -0.1, l = -0.1)
@@ -1030,13 +1107,14 @@ fig2.panelF <- patchwork::wrap_plots(
 ggplot2::ggsave(
     filename = "results/panels/figure2_panelF.pdf",
     plot = fig2.panelF,
-    width = 8, height = 4,
+    width = 17.4, height = 8.7, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure2_panelF.png",
     plot = fig2.panelF,
-    width = 8, height = 4, dpi = 600
+    width = 17.4, height = 8.7, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -1044,27 +1122,36 @@ ggplot2::ggsave(
 ```{r figure2}
 figure2 <- patchwork::wrap_plots(
         list(
-            fig2.panelAB,
+            fig2.panelAB[[1]][[1]], fig2.panelAB[[2]][[1]],
             fig2.panelC,
             fig2.panelD,
             fig2.panelE,
-            fig2.panelF
-        ), 
-        guides = 'collect', tag_level = 'keep',
-        design = "AAAAAA\nBBBCCC\nDDEEEE",
-        heights = c(2,2,3)
+            mito_heatmap_col_dendro, mito_heatmap_col_annotations,
+            mito_heatmap_row_dendro,
+            mito_heatmap
+        ),
+        guides = 'collect',
+        tag_level = 'keep',
+        design = "AAAB\nCCCD\nE#FF\nE#GG\nEHII",
+        heights = c(3.1567, 3.1567, .5, .235, 4),
+        widths = c(
+            2.3675,
+            0.118375,
+            0.68375, 3.55125
+        )
     ) +
-    patchwork::plot_annotation(tag_levels = 'a')
+    patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
     filename = "results/figures/figure2.pdf",
     plot = figure2,
-    width = 9, height = 7,
+    width = 17.4, height = 13.5, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/figures/figure2.png",
     plot = figure2,
-    width = 9, height = 7, dpi = 600
+    width = 17.4, height = 13.5, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -1089,18 +1176,19 @@ fig3.panelA <- novel_se %>%
         x = "Number of samples with expression",
         y = "Number of novel isoforms"
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::scale_y_continuous(expand = c(0,0))
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelA.pdf",
     plot = fig3.panelA,
-    width = 3, height = 3,
+    width = 5.8, height = 5.8, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelA.png",
     plot = fig3.panelA,
-    width = 3, height = 3, dpi = 600
+    width = 5.8, height = 5.8, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -1148,22 +1236,23 @@ fig3.panelB <- novel_se %>%
         ),
         map_signif_level = TRUE,
         y_position = c(660, 720, 780),
-        textsize = 3, tip_length = 0,
+        textsize = 2, tip_length = 0,
         test = 'wilcox.test'
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(legend.position = "none") +
     ggplot2::coord_cartesian(clip = 'off')
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelB.pdf",
     plot = fig3.panelB,
-    width = 3, height = 4,
+    width = 5.8, height = 6.5, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelB.png",
     plot = fig3.panelB,
-    width = 3, height = 4, dpi = 600
+    width = 5.8, height = 6.5, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -1263,7 +1352,7 @@ novel_heatmap <- novel_heatmap_data %>%
         limits = c(-max(abs(novel_matrix)), max(abs(novel_matrix))),
         name = "Z-Expression"
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(
         panel.grid = ggplot2::element_blank(),
         panel.spacing = ggplot2::unit(0, "pt"),
@@ -1288,7 +1377,7 @@ novel_heatmap_col_annotations <- metadata %>%
         "EA" = "#D95F02"
     )) +
     ggplot2::labs(fill = "Sample Condition") +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(
         axis.line.x = ggplot2::element_blank(),
         axis.line.y = ggplot2::element_blank(),
@@ -1326,7 +1415,7 @@ novel_heatmap_row_annotations <- novel_de %>%
         "BE & EA-enriched" = "#A6761D"
     )) +
     ggplot2::labs(fill = "Gene Enrichment") +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme(
         axis.line.x = ggplot2::element_blank(),
         axis.line.y = ggplot2::element_blank(),
@@ -1348,7 +1437,7 @@ novel_heatmap_row_dendro <- ggdendro::segment(novel_row_dendro) %>%
     ggplot2::geom_segment() +
     ggplot2::scale_y_continuous(expand = c(0,0.5)) +
     ggplot2::scale_x_continuous(transform = 'reverse') +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggdendro::theme_dendro() +
     ggplot2::theme(
         plot.tag = ggplot2::element_blank(),
@@ -1360,7 +1449,7 @@ novel_heatmap_col_dendro <- ggdendro::segment(novel_col_dendro) %>%
     ggplot2::ggplot(ggplot2::aes(x = x, y = y, xend = xend, yend = yend)) +
     ggplot2::geom_segment() +
     ggplot2::scale_x_continuous(expand = c(0,0.5)) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggdendro::theme_dendro() +
     ggplot2::theme(
         plot.tag = ggplot2::element_blank(),
@@ -1369,7 +1458,7 @@ novel_heatmap_col_dendro <- ggdendro::segment(novel_col_dendro) %>%
     ggplot2::labs(x = NULL, y = NULL)
 
 spacer <- ggplot2::ggplot() +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::theme_void() +
     ggplot2::theme(plot.tag = ggplot2::element_text(face = "bold"))
 
@@ -1390,13 +1479,14 @@ fig3.panelC <- patchwork::wrap_plots(
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelC.pdf",
     plot = fig3.panelC,
-    width = 8, height = 4,
+    width = 17.4, height = 8.7, units= "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/panels/figure3_panelC.png",
     plot = fig3.panelC,
-    width = 8, height = 4, dpi = 600
+    width = 17.4, height = 8.7, units= "cm",
+    dpi = 600
 )
 ```
 
@@ -1406,22 +1496,31 @@ figure3 <- patchwork::wrap_plots(
         list(
             fig3.panelA,
             fig3.panelB,
-            fig3.panelC
-        ), 
-        guides = 'collect', tag_level = 'keep',
-        design = "AB\nCC", heights = c(2, 3), widths = c(3, 1)
+            spacer,
+            novel_heatmap_col_dendro,
+            novel_heatmap_col_annotations,
+            novel_heatmap_row_dendro,
+            novel_heatmap_row_annotations,
+            novel_heatmap
+        ),
+        guides = 'collect',
+        tag_level = 'keep',
+        design = "AAAB\nCCDD\nCCEE\nFGHH",
+        heights = c(3.024, 0.45, 0.086, 4),
+        widths = c(0.5, 0.088, 2.853, 1.147)
     ) +
-    patchwork::plot_annotation(tag_levels = 'a')
+    patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
     filename = "results/figures/figure3.pdf",
     plot = figure3,
-    width = 9, height = 6,
+    width = 17.4, height = 11.6, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/figures/figure3.png",
     plot = figure3,
-    width = 9, height = 6, dpi = 600
+    width = 17.4, height = 11.6, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -1469,7 +1568,7 @@ glm_optimization <- function(
         X_best <- X[,best_features] %>%
             as.matrix() %>%
             magrittr::set_colnames(colnames(X)[best_features])
-        
+
         alpha_model <- glmnet::cv.glmnet(
             x = X_best, y = y,
             alpha = alpha,
@@ -1625,7 +1724,7 @@ figure4.panelABCD <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
     plot <- models_be['roc',X] %>%
         magrittr::set_names(X) %>%
         pROC::ggroc(aes = c("color")) +
-        creater::theme_create(base_size = 6) +
+        theme_cell() +
         ggplot2::geom_abline(
             slope = 1, intercept = 1,
             linetype = 'dashed', color = 'lightgray'
@@ -1668,9 +1767,7 @@ figure4.panelABCD <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         width = 4, height = 4, dpi = 600
     )
     return(list(plot))
-}) %>%
-do.call('c', .) %>%
-patchwork::wrap_plots(ncol = 4)
+})
 
 # 5 of 13 count features are novel!
 models_be[['features', 'counts']] %>%
@@ -1790,7 +1887,7 @@ figure4.panelEFGH <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
     plot <- models_ea['roc',X] %>%
         magrittr::set_names(X) %>%
         pROC::ggroc(aes = c("color")) +
-        creater::theme_create(base_size = 6) +
+        theme_cell() +
         ggplot2::geom_abline(
             slope = 1, intercept = 1,
             linetype = 'dashed', color = 'lightgray'
@@ -1833,9 +1930,7 @@ figure4.panelEFGH <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         width = 4, height = 4, dpi = 600
     )
     return(list(plot))
-}) %>%
-do.call('c', .) %>%
-patchwork::wrap_plots(ncol = 4)
+})
 
 # 11 of 15 count features are novel!
 models_ea[['features', 'counts']] %>%
@@ -1959,7 +2054,7 @@ figure4.panelIJKL <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
     plot <- models_dis['roc',X] %>%
         magrittr::set_names(X) %>%
         pROC::ggroc(aes = c("color")) +
-        creater::theme_create(base_size = 6) +
+        theme_cell() +
         ggplot2::geom_abline(
             slope = 1, intercept = 1,
             linetype = 'dashed', color = 'lightgray'
@@ -2002,9 +2097,7 @@ figure4.panelIJKL <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         width = 4, height = 4, dpi = 600
     )
     return(list(plot))
-}) %>%
-do.call('c', .) %>%
-patchwork::wrap_plots(ncol = 4)
+})
 
 # 12 of 14 count features are novel!
 models_dis[['features', 'counts']] %>%
@@ -2031,7 +2124,7 @@ fgsea_ea <- fgsea::fgsea(
         }
 )
 
-figure4_panelM <- fgsea_ea %>%
+figure4.panelM <- fgsea_ea %>%
     dplyr::filter(padj < 0.001) %>%
     dplyr::arrange(padj) %>%
     dplyr::slice_head(n = 20) %>%
@@ -2051,7 +2144,7 @@ figure4_panelM <- fgsea_ea %>%
         expand = c(0,0)
     ) +
     ggplot2::scale_color_gradient2(
-        breaks = c(1, 1.5, 2, 2.5, 3, 3.5), 
+        breaks = c(1, 1.5, 2, 2.5, 3, 3.5),
         labels = c(1, 1.5, 2, 2.5, 3, 3.5),
         low = RColorBrewer::brewer.pal(n = 11, name = "PRGn")[1],
         mid = "white",
@@ -2060,14 +2153,14 @@ figure4_panelM <- fgsea_ea %>%
     ) +
     ggplot2::scale_size_continuous(
         name = expression(-log[10](adjusted~p-value)),
-        breaks = c(4, 8, 16, 32), 
+        breaks = c(4, 8, 16, 32),
         labels = c(4, 8, 16, 32)
     ) +
     ggplot2::labs(
         x = "Normalized Enrichment Score",
         y = "Hallmark Pathway"
     ) +
-    creater::theme_create(base_size = 6) +
+    theme_cell() +
     ggplot2::theme(
         legend.position = 'right',
         axis.text.y = ggplot2::element_text(size = 5)
@@ -2104,7 +2197,7 @@ fgsea_be <- fgsea::fgsea(
         }
 )
 
-figure4_panelN <- fgsea_be %>%
+figure4.panelN <- fgsea_be %>%
     dplyr::filter(padj < 0.001) %>%
     dplyr::arrange(padj) %>%
     dplyr::slice_head(n = 20) %>%
@@ -2133,14 +2226,14 @@ figure4_panelN <- fgsea_be %>%
     ) +
     ggplot2::scale_size_continuous(
         name = expression(-log[10](adjusted~p-value)),
-        breaks = c(4, 8, 16, 32), 
+        breaks = c(4, 8, 16, 32),
         labels = c(4, 8, 16, 32)
     ) +
     ggplot2::labs(
         x = "Normalized Enrichment Score",
         y = "Hallmark Pathway"
     ) +
-    creater::theme_create(base_size = 6) +
+    theme_cell() +
     ggplot2::theme(
         legend.position = 'none',
         axis.text.y = ggplot2::element_text(size = 5)
@@ -2161,31 +2254,39 @@ ggplot2::ggsave(
 
 ## Figure 4
 ```{r figure4}
-figure4_panelAL <- patchwork::wrap_plots(list(
-        figure4.panelABCD,
-        figure4.panelEFGH,
-        figure4.panelIJKL
-    ), ncol = 1, guides = 'collect')
-figure4_panelMN <- patchwork::wrap_plots(list(
-            figure4_panelM,
-            figure4_panelN
-        ), ncol = 1, heights = c(17, 12), guides = 'collect')
 figure4 <- patchwork::wrap_plots(
-        list(figure4_panelAL, figure4_panelMN),
-        guides = 'collect', tag_level = 'keep',
-        ncol = 2, widths = c(9, 5)
+        list(
+            figure4.panelABCD[[1]][[1]],
+            figure4.panelABCD[[2]][[1]],
+            figure4.panelABCD[[3]][[1]],
+            figure4.panelABCD[[4]][[1]],
+            figure4.panelEFGH[[1]][[1]],
+            figure4.panelEFGH[[2]][[1]],
+            figure4.panelEFGH[[3]][[1]],
+            figure4.panelEFGH[[4]][[1]],
+            figure4.panelIJKL[[1]][[1]],
+            figure4.panelIJKL[[2]][[1]],
+            figure4.panelIJKL[[3]][[1]],
+            figure4.panelIJKL[[4]][[1]],
+            patchwork::free(figure4.panelM, side = "l"),
+            patchwork::free(figure4.panelN, side = "l")
+        ),
+        guides = 'collect',
+        tag_level = 'keep',
+        design = "ABCD\nEFGH\nIJKL\nMMMM\nNNNN"
     ) +
-    patchwork::plot_annotation(tag_levels = 'a')
+    patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
     filename = "results/figures/figure4.pdf",
     plot = figure4,
-    width = 14, height = 6,
+    width = 17.4, height = 18, units = "cm",
     device = cairo_pdf
 )
 ggplot2::ggsave(
     filename = "results/figures/figure4.png",
     plot = figure4,
-    width = 14, height = 6, dpi = 600
+    width = 17.4, height = 18, units = "cm",
+    dpi = 600
 )
 ```
 
@@ -2276,8 +2377,11 @@ figureS1.panelA <- data.frame(
             expression("> " ~ 10^-1)
         )
     ) +
-    ggplot2::theme(legend.background = ggplot2::element_blank()) +
-    creater::theme_create(base_size = 8)
+    theme_cell() +
+    ggplot2::theme(
+        legend.background = ggplot2::element_blank(),
+        legend.key.size = ggplot2::unit(0.25, "cm"),
+    )
 ggplot2::ggsave(
     filename = "results/panels/figureS1_panelA.pdf",
     plot = figureS1.panelA,
@@ -2302,16 +2406,13 @@ figureS1.panelB <- SummarizedExperiment::colData(novel_se) %>%
     ggplot2::ggplot(ggplot2::aes(x = condition_code, y = age, fill = condition_code)) +
     ggplot2::geom_boxplot(outlier.size = 0.5) +
     ggplot2::labs(x = "Sample Condition", y = "Patient age") +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::scale_fill_manual(values = c(
         'CT' = '#666666',
         'BE' = '#2C9DEF',
         'EA' = '#D95F02'
     )) +
-    ggplot2::theme(
-        legend.position = 'none',
-        plot.tag = ggplot2::element_text(size = 12.8)
-    )
+    ggplot2::theme(legend.position = "none")
 ggplot2::ggsave(
     'results/panels/figureS1_panelB.pdf',
     height = 3, width = 2, device = cairo_pdf
@@ -2335,7 +2436,7 @@ figureS1.panelC <- readr::read_csv(
     ggplot2::ggplot(ggplot2::aes(x = aa_length)) +
     ggplot2::geom_histogram(bins = 50, fill = "#2C9DEF") +
     ggplot2::labs(x = "Predicted ORF length (aa)", y = "Count") +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::lims(x=c(50,250)) +
     ggplot2::theme(legend.position = "none") +
     ggplot2::scale_y_continuous(expand = c(0,0))
@@ -2353,7 +2454,7 @@ ggplot2::ggsave(
 
 ```{r figS1.panel_d}
 figureS1.panelD <- readr::read_tsv(
-        'data/other/phastcons.tsv', col_names = c('gene_id', 'score', 'txome'),
+        'data/other/misc/phastcons.tsv', col_names = c('gene_id', 'score', 'txome'),
         show_col_types = FALSE, progress = FALSE
     ) %>%
     dplyr::arrange(score) %>%
@@ -2374,12 +2475,13 @@ figureS1.panelD <- readr::read_tsv(
             txome = c("Novel cfRNA", "GENCODE"), score = c(0, 0), ecdf = c(0, 0)
         ), alpha = 0
     ) +
-    creater::theme_create(base_size = 8) +
+    theme_cell() +
     ggplot2::scale_color_manual(values = c(
         'Novel cfRNA' = '#2C9DEF',
         'GENCODE' = '#666666'
     ), guide = ggplot2::guide_legend(override.aes = list(shape = 15, size = 6, alpha = 1))) +
-    ggplot2::labs(x = "PhastCons score", y = "ECDF", color = "Transcriptome")
+    ggplot2::labs(x = "PhastCons score", y = "ECDF", color = "Transcriptome") +
+    ggplot2::theme(legend.key.spacing.y = ggplot2::unit(-0.14, "cm"))
 ggplot2::ggsave(
     'results/panels/figureS1_panelD.pdf', figureS1.panelD,
     width = 3, height = 3, device = cairo_pdf
@@ -2397,8 +2499,8 @@ figureS1.panelE <- magick::image_read_pdf('results/panels/figureS1_panelE.pdf', 
         magick::image_crop(geometry='2700x1350', gravity = 'NorthWest') %>%
         grid::rasterGrob() %>%
         ggplotify::as.ggplot() +
-        ggplot2::theme_void() +
-        ggplot2::theme(plot.tag = ggplot2::element_text(size = 12.8, face = "bold"))
+        theme_cell() +
+        ggplot2::theme_void()
 ```
 
 ## Figure S1
@@ -2416,10 +2518,11 @@ figureS1 <- patchwork::wrap_plots(list(
         heights = c(1.75,5),
         guides = 'keep'
     ) +
-    patchwork::plot_annotation(tag_levels = 'a')
+    patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
     'results/figures/figureS1.pdf', figureS1,
-    width = 9, height = 7, device = cairo_pdf
+    width = 17.4, height = 13.5, units = "cm",
+    device = cairo_pdf
 )
 ggplot2::ggsave(
     'results/figures/figureS1.png', figureS1,
