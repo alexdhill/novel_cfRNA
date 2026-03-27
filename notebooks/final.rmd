@@ -2487,6 +2487,14 @@ ggplot2::ggsave(
     height = 15,
     device = cairo_pdf
 )
+ggplot2::ggsave(
+    "results/figures/figure5.png",
+    figure5,
+    units = "cm",
+    width = 17.4,
+    height = 15,
+    dpi = 600
+)
 ```
 
 
@@ -2748,6 +2756,7 @@ ggplot2::ggsave(
 )
 ggplot2::ggsave(
     'results/figures/figureS1.png', figureS1,
-    width = 9, height = 7, dpi = 600
+    width = 17.4, height = 13.5, units = "cm",
+    dpi = 600
 )
 ```
