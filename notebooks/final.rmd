@@ -51,7 +51,7 @@ theme_cell <- function() {
         ) +
         ggplot2::theme(
             plot.title = ggplot2::element_text(
-                size = 8,
+                size = 6,
                 color = "#282A36",
                 face = 'bold',
                 hjust = 0,
@@ -133,38 +133,39 @@ novel_se <- creater::load_counts("data/counts/short_read/novel")
 gencode_se <- creater::load_counts("data/counts/short_read/gencode")
 
 ## Read in metadata
-metadata <- readr::read_csv("data/metadata.csv", show_col_types = FALSE, progress = FALSE) %>%
-        dplyr::mutate(
-            condition = dplyr::case_when(
-                condition == "healthy" ~ "Control",
-                condition == "barretts" ~ "Barrett's Esophagus",
-                condition == "adenocarcinoma" ~ "Esophageal Adenocarcinoma"
-            ),
-            condition = factor(condition, levels = c(
-                "Control",
-                "Barrett's Esophagus",
-                "Esophageal Adenocarcinoma"
-            )),
-            condition_code = dplyr::case_when(
-                condition == "Control" ~ "CT",
-                condition == "Barrett's Esophagus" ~ "BE",
-                condition == "Esophageal Adenocarcinoma" ~ "EA"
-            ),
-            sample_id = make.unique(condition_code, sep=""),
-            condition_code = factor(condition_code, levels = c("CT", "BE", "EA")),
-            sex = factor(sex, levels = c('F', 'M')),
-            age = as.numeric(age)
-        ) %>%
-        dplyr::mutate(
-            age = dplyr::case_when(
-                is.na(age) ~ mean(age, na.rm = TRUE),
-                TRUE ~ age
-            ),
-            .by = c("condition", "sex")
-        ) %>%
-        dplyr::mutate(
-            scaled_age = (age - mean(age)) / sd(age),
-        )
+metadata <- "data/metadata.csv" %>%
+    readr::read_csv(show_col_types = FALSE, progress = FALSE) %>%
+    dplyr::mutate(
+        condition = dplyr::case_when(
+            condition == "healthy" ~ "Control",
+            condition == "barretts" ~ "Barrett's Esophagus",
+            condition == "adenocarcinoma" ~ "Esophageal Adenocarcinoma"
+        ),
+        condition = factor(condition, levels = c(
+            "Control",
+            "Barrett's Esophagus",
+            "Esophageal Adenocarcinoma"
+        )),
+        condition_code = dplyr::case_when(
+            condition == "Control" ~ "CT",
+            condition == "Barrett's Esophagus" ~ "BE",
+            condition == "Esophageal Adenocarcinoma" ~ "EA"
+        ),
+        sample_id = make.unique(condition_code, sep=""),
+        condition_code = factor(condition_code, levels = c("CT", "BE", "EA")),
+        sex = factor(sex, levels = c('F', 'M')),
+        age = as.numeric(age)
+    ) %>%
+    dplyr::mutate(
+        age = dplyr::case_when(
+            is.na(age) ~ mean(age, na.rm = TRUE),
+            TRUE ~ age
+        ),
+        .by = c("condition", "sex")
+    ) %>%
+    dplyr::mutate(
+        scaled_age = (age - mean(age)) / sd(age),
+    )
 SummarizedExperiment::colData(novel_se) <- dplyr::left_join(
         data.frame(
             names = colnames(novel_se),
@@ -564,7 +565,8 @@ fig1.panelFGHI <- purrr::imap(list(
         ggplot2::labs(
             x = "Chromosome",
             y = "DE Novel genes / GB",
-            fill = "Enrichment"
+            fill = "Enrichment",
+            title = paste0(group, " novel cfRNAs")
         ) +
         ggplot2::scale_fill_manual(values = list(
             'BE-enriched' = "#2C9DEF",
@@ -682,9 +684,9 @@ fig2.panelAB <- lapply(list("BE", "EA"), function(numer) {
             data = data.frame(
                 label = c('CT-enriched', paste0(numer, '-enriched')),
                 x = c(-Inf, Inf), y = c(Inf, Inf),
-                hjust = c(-0.1, 1.1), vjust = c(1.1, 1.1)
+                hjust = c(-0.1, 1.1), vjust = c(-0.1, -0.1)
             ), ggplot2::aes(x = x, y = y, label = label, hjust = hjust, vjust = vjust),
-            size = 3, color = "lightgray"
+            size = 6, size.unit = "pt", color = "lightgray"
         ) +
         ggplot2::geom_point() +
         ggplot2::scale_color_manual(
@@ -703,7 +705,8 @@ fig2.panelAB <- lapply(list("BE", "EA"), function(numer) {
         )) +
         ggplot2::theme(
             legend.key.spacing.y = ggplot2::unit(-.16, "cm")
-        )
+        ) +
+        ggplot2::coord_cartesian(clip = "off")
     panel_letter = c("BE" = "A", "EA" = "B")
     ggplot2::ggsave(
         filename = paste0("results/panels/figure2_panel", panel_letter[[numer]], ".pdf"),
@@ -744,10 +747,11 @@ fig2.panelC <- dplyr::left_join(
     dplyr::filter(BE_signif | EA_signif) %>%
     dplyr::mutate(
         present = dplyr::case_when(
-            BE_signif & EA_signif ~ list(c("BE", "EA")),
-            BE_signif ~ list("BE"),
-            EA_signif ~ list("EA")
-        )
+            BE_signif & EA_signif ~ "BE+EA",
+            BE_signif ~ "BE",
+            EA_signif ~ "EA"
+        ),
+        present = factor(present, levels = c("BE", "EA", "BE+EA"))
     ) %>%
     dplyr::left_join(
         biotypes %>% dplyr::select(gene_id, gene_biotype),
@@ -758,10 +762,7 @@ fig2.panelC <- dplyr::left_join(
     ) %>%
     dplyr::bind_rows(expand.grid(
         gene_biotype = unique(.$gene_biotype),
-        present = list(
-            "BE", "EA",
-            c("BE", "EA")
-        )
+        present = factor(c("BE", "EA", "BE+EA"), levels = c("BE", "EA", "BE+EA"))
     )) %>%
     dplyr::summarize(
         .by = c("gene_biotype", "present"),
@@ -769,13 +770,14 @@ fig2.panelC <- dplyr::left_join(
     ) %>%
     ggplot2::ggplot(ggplot2::aes(x = present, y = count, fill = gene_biotype)) +
     ggplot2::geom_bar(stat = "identity", position = 'dodge') +
-    ggupset::scale_x_upset() +
+    ggupset::axis_combmatrix(sep = "\\+") +
     ggplot2::scale_y_continuous(expand = c(0,0)) +
     ggplot2::scale_fill_manual(values = barretts_palette) +
     ggplot2::labs(
         x = "Differentially expressed genes",
         y = "Number of genes",
-        fill = "Gene biotype"
+        fill = "Gene biotype",
+        title = "DE genes enriched in disease conditions"
     ) +
     theme_cell() +
     ggplot2::theme(legend.position = "none")
@@ -816,10 +818,11 @@ fig2.panelD <- dplyr::left_join(
     dplyr::filter(BE_signif | EA_signif) %>%
     dplyr::mutate(
         present = dplyr::case_when(
-            BE_signif & EA_signif ~ list(c("BE", "EA")),
-            BE_signif ~ list("BE"),
-            EA_signif ~ list("EA")
-        )
+            BE_signif & EA_signif ~ "BE+EA",
+            BE_signif ~ "BE",
+            EA_signif ~ "EA"
+        ),
+        present = factor(present, levels = c("BE", "EA", "BE+EA"))
     ) %>%
     dplyr::left_join(
         biotypes %>% dplyr::select(gene_id, gene_biotype),
@@ -828,10 +831,7 @@ fig2.panelD <- dplyr::left_join(
     dplyr::mutate(gene_biotype = factor(gene_biotype, levels = names(barretts_palette))) %>%
     dplyr::bind_rows(expand.grid(
         gene_biotype = unique(.$gene_biotype),
-        present = list(
-            "BE", "EA",
-            c("BE", "EA")
-        )
+        present = factor(c("BE", "EA", "BE+EA"), levels = c("BE", "EA", "BE+EA"))
     )) %>%
     dplyr::summarize(
         .by = c("gene_biotype", "present"),
@@ -839,13 +839,14 @@ fig2.panelD <- dplyr::left_join(
     ) %>%
     ggplot2::ggplot(ggplot2::aes(x = present, y = count, fill = gene_biotype)) +
     ggplot2::geom_bar(stat = "identity", position = 'dodge') +
-    ggupset::scale_x_upset() +
+    ggupset::axis_combmatrix(sep="\\+") +
     ggplot2::scale_y_continuous(expand = c(0,0)) +
     ggplot2::scale_fill_manual(values = barretts_palette) +
     ggplot2::labs(
         x = "Differentially expressed genes",
         y = "Number of genes",
-        fill = "Gene biotype"
+        fill = "Gene biotype",
+        title = "DE genes enriched in healthy controls"
     ) +
     theme_cell() +
     ggplot2::theme(legend.position = "none")
@@ -910,7 +911,8 @@ fig2.panelE <- DESeq2::counts(novel_dds, normalized = TRUE) %>%
     )) +
     ggplot2::labs(
         x = "Sample Condition",
-        y = "Normalized gene expression"
+        y = "Normalized gene expression",
+        title = "Mitochondrial gene expression"
     ) +
     ggsignif::geom_signif(
         comparisons = list(
@@ -1077,7 +1079,6 @@ mito_heatmap_row_dendro <- ggdendro::segment(mito_row_dendro) %>%
     ggdendro::theme_dendro() +
     ggplot2::theme(
         plot.margin = ggplot2::margin(t = -0.1, r = -0.1, b = -0.1, l = -0.1),
-        panel.spacing = ggplot2::unit(c(0,0,0,0), "cm"),
         plot.tag = ggplot2::element_blank()
     ) +
     ggplot2::labs(x = NULL, y = NULL)
@@ -1091,7 +1092,8 @@ mito_heatmap_col_dendro <- ggdendro::segment(mito_col_dendro) %>%
     ggplot2::theme(
         plot.margin = ggplot2::margin(t = -0.1, r = -0.1, b = -0.1, l = -0.1)
     ) +
-    ggplot2::labs(x = NULL, y = NULL)
+    ggplot2::labs(x = NULL, y = NULL, title = "Mitochondrial expression heatmap") +
+    ggplot2::coord_cartesian(clip = 'off')
 
 fig2.panelF <- patchwork::wrap_plots(
         list(
@@ -1172,9 +1174,15 @@ fig3.panelA <- novel_se %>%
     dplyr::filter(startsWith(gene_id, 'novel_gene')) %>%
     ggplot2::ggplot(ggplot2::aes(x = detected)) +
     ggplot2::geom_bar(fill = barretts_palette["Novel Gene"]) +
+    ggplot2::geom_vline(
+        xintercept = 21,
+        color = "#282A36",
+        linetype = "dashed"
+    ) +
     ggplot2::labs(
         x = "Number of samples with expression",
-        y = "Number of novel isoforms"
+        y = "Number of novel isoforms",
+        title = "Common expression of novel cfRNAs"
     ) +
     theme_cell() +
     ggplot2::scale_y_continuous(expand = c(0,0))
@@ -1226,7 +1234,8 @@ fig3.panelB <- novel_se %>%
     )) +
     ggplot2::labs(
         x = "Sample Condition",
-        y = "Number of unique novel isoforms"
+        y = "Number of unique novel isoforms",
+        title = "Patient-specific novel cfRNAs"
     ) +
     ggsignif::geom_signif(
         comparisons = list(
@@ -1460,7 +1469,22 @@ novel_heatmap_col_dendro <- ggdendro::segment(novel_col_dendro) %>%
 spacer <- ggplot2::ggplot() +
     theme_cell() +
     ggplot2::theme_void() +
-    ggplot2::theme(plot.tag = ggplot2::element_text(face = "bold"))
+    ggplot2::theme(
+        plot.title = ggplot2::element_text(
+            size = 6,
+            color = "#282A36",
+            face = 'bold',
+            hjust = 0,
+            vjust = 0.5
+        ),
+        plot.tag = ggplot2::element_text(
+            size = 10,
+            face = "bold",
+            color = "#282A36"
+        ),
+    ) +
+    ggplot2::labs(title = "DE novel cfRNA expression heatmap") +
+    ggplot2::coord_cartesian(clip = 'off')
 
 fig3.panelC <- patchwork::wrap_plots(
         list(
@@ -1732,9 +1756,13 @@ figure4.panelABCD <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         ggplot2::geom_text(
             x = 0, y = 0, hjust = 1, vjust = 0, color = 'black',
             label = paste0(
-                'AUC=',
-                round(as.numeric(pROC::auc(models_be['roc', X][[1]])), digits=2)
-            )
+                "AUC = ",
+                round(as.numeric(pROC::auc(models_be['roc', X][[1]])), digits=2),
+                "\n",
+                nrow(models_be['features', X][[1]])-1,
+                " non-zero features"
+            ),
+            check_overlap = TRUE
         ) +
         ggplot2::scale_color_manual(values = c(
         "metadata" = "#666666",
@@ -1744,12 +1772,7 @@ figure4.panelABCD <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         )) +
         ggplot2::labs(
             x = "False Positive Rate",
-            y = "True Positive Rate",
-            title = paste0(
-                titles[[X]], "\n",
-                nrow(models_be['features', X][[1]])-1,
-                " features"
-            )
+            y = "True Positive Rate"
         ) +
         ggplot2::theme(legend.position = "none")
     lines <- which(lapply(plot$layers, function(l) {class(l$geom)[1]}) == "GeomLine")
@@ -1896,8 +1919,12 @@ figure4.panelEFGH <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
             x = 0, y = 0, hjust = 1, vjust = 0, color = 'black',
             label = paste0(
                 'AUC=',
-                round(as.numeric(pROC::auc(models_ea['roc', X][[1]])), digits=2)
-            )
+                round(as.numeric(pROC::auc(models_ea['roc', X][[1]])), digits=2),
+                "\n",
+                nrow(models_ea['features', X][[1]])-1,
+                " non-zero features"
+            ),
+            check_overlap = TRUE
         ) +
         ggplot2::scale_color_manual(values = c(
             "metadata" = "#666666",
@@ -1907,12 +1934,7 @@ figure4.panelEFGH <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         )) +
         ggplot2::labs(
             x = "False Positive Rate",
-            y = "True Positive Rate",
-            title = paste0(
-                titles[[X]], "\n",
-                nrow(models_ea['features', X][[1]])-1,
-                " features"
-            )
+            y = "True Positive Rate"
         ) +
         ggplot2::theme(legend.position = "none")
     lines <- which(lapply(plot$layers, function(l) {class(l$geom)[1]}) == "GeomLine")
@@ -2063,8 +2085,12 @@ figure4.panelIJKL <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
             x = 0, y = 0, hjust = 1, vjust = 0, color = 'black',
             label = paste0(
                 'AUC=',
-                round(as.numeric(pROC::auc(models_dis['roc', X][[1]])), digits=2)
-            )
+                round(as.numeric(pROC::auc(models_dis['roc', X][[1]])), digits=2),
+                "\n",
+                nrow(models_dis['features', X][[1]])-1,
+                " non-zero features"
+            ),
+            check_overlap = TRUE
         ) +
         ggplot2::scale_color_manual(values = c(
         "metadata" = "#666666",
@@ -2074,12 +2100,7 @@ figure4.panelIJKL <- lapply(c('metadata', 'gencode', 'novel', 'counts'), functio
         )) +
         ggplot2::labs(
             x = "False Positive Rate",
-            y = "True Positive Rate",
-            title = paste0(
-                titles[[X]], "\n",
-                nrow(models_dis['features', X][[1]])-1,
-                " features"
-            )
+            y = "True Positive Rate"
         ) +
         ggplot2::theme(legend.position = "none")
     lines <- which(lapply(plot$layers, function(l) {class(l$geom)[1]}) == "GeomLine")
@@ -2106,8 +2127,198 @@ models_dis[['features', 'counts']] %>%
     dplyr::arrange(desc(abs(s1)))
 ```
 
+## Figure 4
+```{r figure4}
+plot_label <- function(title, rot = 0, size = 8) {
+    lab <- ggplot2::ggplot() +
+        ggplot2::theme_void() +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(
+                size = size,
+                color = "#282A36",
+                face = 'bold',
+                hjust = ifelse(rot == 0, 0.6, 0.5),
+                vjust = ifelse(rot == 0, 0, 0.6),
+                angle = rot
+            ),
+            panel.spacing = ggplot2::unit(0, "cm")
+        ) +
+        ggplot2::labs(title = title) +
+        ggplot2::coord_cartesian(clip = 'off')
+    return(patchwork::free(lab))
+}
+figure4 <- patchwork::wrap_plots(
+        list(
+            plot_label("Metadata"),
+            plot_label("GENCODE"),
+            plot_label("Novel cfRNA"),
+            plot_label("GENCODE+Novel"),
+            plot_label("Barrett's Esophagus\nfrom Healthy", 90, 6),
+            figure4.panelABCD[[1]][[1]],
+            figure4.panelABCD[[2]][[1]],
+            figure4.panelABCD[[3]][[1]],
+            figure4.panelABCD[[4]][[1]],
+            plot_label("Esophageal Adenocarcinoma\nfrom Healthy", 90, 6),
+            figure4.panelEFGH[[1]][[1]],
+            figure4.panelEFGH[[2]][[1]],
+            figure4.panelEFGH[[3]][[1]],
+            figure4.panelEFGH[[4]][[1]],
+            plot_label("Barrett's Esophagus from\nEsophageal Adenocarcinoma", 90, 6),
+            figure4.panelIJKL[[1]][[1]],
+            figure4.panelIJKL[[2]][[1]],
+            figure4.panelIJKL[[3]][[1]],
+            figure4.panelIJKL[[4]][[1]]
+        ),
+        guides = 'collect',
+        tag_level = 'keep',
+        design = "#ABCD\nEFGHI\nJKLMN\nOPQRS",
+        heights = c(0.02, 1, 1, 1),
+        widths = c(0.15, 1, 1, 1, 1)
+    ) +
+    patchwork::plot_annotation(
+        tag_levels = list(list(
+            "", "", "", "",
+            "", "A", "B", "C", "D",
+            "", "E", "F", "G", "H",
+            "", "I", "J", "K", "L"
+        ))
+    )
+ggplot2::ggsave(
+    filename = "results/figures/figure4.pdf",
+    plot = figure4,
+    width = 17.4, height = 13, units = "cm",
+    device = cairo_pdf
+)
+ggplot2::ggsave(
+    filename = "results/figures/figure4.png",
+    plot = figure4,
+    width = 17.4, height = 13, units = "cm",
+    dpi = 600
+)
+```
+
+# Figure 5
+## Figure 5 Panel A-D (CTLA, LAG4 expression)
+```{r figure5.panelABD}
+de <- de_genes_ea %>%
+    dplyr::mutate(xstart = "CT", xend = "EA") %>%
+    dplyr::bind_rows(
+        de_genes_be %>%
+            dplyr::mutate(xstart = "CT", xend = "BE")
+    ) %>%
+    dplyr::mutate(
+        signif = dplyr::case_when(
+            padj > 0.05 ~ "ns",
+            padj > 0.01 ~ "*",
+            padj > 0.001 ~ "**",
+            TRUE ~ "***"
+        )
+    ) %>%
+    dplyr::left_join(
+        novel_dds %>%
+            DESeq2::counts(normalized = TRUE) %>%
+            apply(MARGIN = 1, FUN = max) %>%
+            as.data.frame() %>%
+            dplyr::rename(maxcnt = ".") %>%
+            dplyr::mutate(gene_id = rownames(.)),
+        by = "gene_id"
+    )
+genes <- c("S100A16", "FRAT2", "HHEX", "AIM2")
+figure5.panelABCD <- lapply(genes, function(gene) {
+    des <- de %>%
+        dplyr::filter(gene_name == gene) %>%
+        dplyr::mutate(
+            ypos = max(maxcnt) * seq(from = 1.05, by = 0.1, length.out = nrow(.)),
+            xstart = factor(xstart, levels = c("CT", "BE", "EA")),
+            xend = factor(xend, levels = c("CT", "BE", "EA"))
+        )
+    plot <- novel_dds %>%
+        DESeq2::counts(normalized = TRUE) %>%
+        as.data.frame() %>%
+        dplyr::mutate(gene_id = rownames(.)) %>%
+        dplyr::left_join(
+            novel_se %>%
+                SummarizedExperiment::rowData() %>%
+                as.data.frame() %>%
+                dplyr::select(gene_id, gene_name, gene_biotype),
+            by = "gene_id"
+        ) %>%
+        dplyr::filter(gene_name == gene) %>%
+        tidyr::pivot_longer(
+            dplyr::starts_with("SLDK"),
+            names_to = "sample",
+            values_to = "counts"
+        ) %>%
+        dplyr::left_join(
+            novel_se %>%
+                SummarizedExperiment::colData() %>%
+                as.data.frame() %>%
+                dplyr::select(sample, sample_id, condition_code),
+            by = "sample"
+        ) %>%
+        ggplot2::ggplot(ggplot2::aes(x = condition_code, y = counts, fill = condition_code)) +
+        ggplot2::geom_boxplot(outlier.size = 0.5) +
+        ggplot2::geom_segment(
+            data = des,
+            ggplot2::aes(
+                x = xstart, xend = xend, y = ypos, yend = ypos
+            ),
+            color = "black",
+            inherit.aes = FALSE
+        ) +
+        ggplot2::geom_text(
+            data = des,
+            ggplot2::aes(
+                x = (as.numeric(xend) - as.numeric(xstart))/2 + as.numeric(xstart),
+                y = ypos,
+                label = signif
+            ),
+            color = "black",
+            size = 7,
+            size.unit = "pt",
+            hjust = 0.5,
+            vjust = 0,
+            inherit.aes = FALSE
+        ) +
+        ggplot2::scale_fill_manual(values = c(
+            "CT" = "#666666",
+            "BE" = "#2C9DEF",
+            "EA" = "#D95F02"
+        )) +
+        theme_cell() +
+        ggplot2::theme(legend.position = "none") +
+        ggplot2::coord_cartesian(clip = "off") +
+        ggplot2::labs(
+            x = "Sample ID",
+            y = "Counts",
+            title = gene
+        )
+    panel = c(
+        "S100A16" = "A",
+        "FRAT2" = "B",
+        "HHEX" = "C",
+        "AIM2" = "D"
+    )
+    ggplot2::ggsave(
+        paste0(
+            "results/panels/figure5_panel",
+            panel[[gene]],
+            ".pdf"
+        ),
+        plot,
+        units = "cm",
+        height = 5,
+        width = 4.35,
+        device = cairo_pdf
+    )
+    return(list(plot))
+}) %>%
+do.call("c", args = .)
+```
+
+
 ## Panel M: EA GSEA
-```{r fig4.panel_m}
+```{r fig5.panel_e}
 fgsea_ea <- fgsea::fgsea(
     pathways = fgsea::gmtPathways('data/references/hallmark_pathways.gmt'),
     stats = de_genes_ea %>%
@@ -2124,7 +2335,7 @@ fgsea_ea <- fgsea::fgsea(
         }
 )
 
-figure4.panelM <- fgsea_ea %>%
+figure5.panelE <- fgsea_ea %>%
     dplyr::filter(padj < 0.001) %>%
     dplyr::arrange(padj) %>%
     dplyr::slice_head(n = 20) %>%
@@ -2158,7 +2369,8 @@ figure4.panelM <- fgsea_ea %>%
     ) +
     ggplot2::labs(
         x = "Normalized Enrichment Score",
-        y = "Hallmark Pathway"
+        y = "Hallmark Pathway",
+        title = "Esophageal Adenocarcinoma enriched pathways"
     ) +
     theme_cell() +
     ggplot2::theme(
@@ -2167,20 +2379,20 @@ figure4.panelM <- fgsea_ea %>%
     ) +
     ggplot2::coord_cartesian(clip = 'off')
 ggplot2::ggsave(
-    filename = "results/panels/figure4_panelM.pdf",
-    plot = figure4_panelM,
+    filename = "results/panels/figure5_panelE.pdf",
+    plot = figure5.panelE,
     width = 5, height = 4,
     device = cairo_pdf
 )
 ggplot2::ggsave(
-    filename = "results/panels/figure4_panelM.png",
-    plot = figure4_panelM,
+    filename = "results/panels/figure5_panelE.png",
+    plot = figure5_panelE,
     width = 5, height = 4, dpi = 600
 )
 ```
 
-## Panel N: BE GSEA
-```{r fig4.panel_n}
+## Panel F: BE GSEA
+```{r fig4.panel_f}
 fgsea_be <- fgsea::fgsea(
     pathways = fgsea::gmtPathways('data/references/hallmark_pathways.gmt'),
     stats = de_genes_be %>%
@@ -2197,7 +2409,7 @@ fgsea_be <- fgsea::fgsea(
         }
 )
 
-figure4.panelN <- fgsea_be %>%
+figure5.panelF <- fgsea_be %>%
     dplyr::filter(padj < 0.001) %>%
     dplyr::arrange(padj) %>%
     dplyr::slice_head(n = 20) %>%
@@ -2231,7 +2443,8 @@ figure4.panelN <- fgsea_be %>%
     ) +
     ggplot2::labs(
         x = "Normalized Enrichment Score",
-        y = "Hallmark Pathway"
+        y = "Hallmark Pathway",
+        title = "Barrett's Esophagus enriched pathways"
     ) +
     theme_cell() +
     ggplot2::theme(
@@ -2240,53 +2453,39 @@ figure4.panelN <- fgsea_be %>%
     ) +
     ggplot2::coord_cartesian(clip = 'off')
 ggplot2::ggsave(
-    filename = "results/panels/figure4_panelN.pdf",
-    plot = figure4_panelN,
+    filename = "results/panels/figure5_panelF.pdf",
+    plot = figure5.panelF,
     width = 5, height = 4,
     device = cairo_pdf
 )
 ggplot2::ggsave(
-    filename = "results/panels/figure4_panelN.png",
-    plot = figure4_panelN,
+    filename = "results/panels/figure5_panelF.png",
+    plot = figure5.panelF,
     width = 5, height = 4, dpi = 600
 )
 ```
 
-## Figure 4
-```{r figure4}
-figure4 <- patchwork::wrap_plots(
-        list(
-            figure4.panelABCD[[1]][[1]],
-            figure4.panelABCD[[2]][[1]],
-            figure4.panelABCD[[3]][[1]],
-            figure4.panelABCD[[4]][[1]],
-            figure4.panelEFGH[[1]][[1]],
-            figure4.panelEFGH[[2]][[1]],
-            figure4.panelEFGH[[3]][[1]],
-            figure4.panelEFGH[[4]][[1]],
-            figure4.panelIJKL[[1]][[1]],
-            figure4.panelIJKL[[2]][[1]],
-            figure4.panelIJKL[[3]][[1]],
-            figure4.panelIJKL[[4]][[1]],
-            patchwork::free(figure4.panelM, side = "l"),
-            patchwork::free(figure4.panelN, side = "l")
-        ),
-        guides = 'collect',
-        tag_level = 'keep',
-        design = "ABCD\nEFGH\nIJKL\nMMMM\nNNNN"
-    ) +
+## Figure 5
+```{r figure5}
+figure5 <- patchwork::wrap_plots(c(
+    figure5.panelABCD,
+    patchwork::free(
+        patchwork::wrap_plots(list(
+            figure5.panelE,
+            figure5.panelF
+        ), ncol = 1, guides = "collect") +
+        patchwork::plot_layout(heights = c(16, 12))
+    )
+)) +
+    patchwork::plot_layout(design = "ABCD\nEEEE", heights = c(1, 3)) +
     patchwork::plot_annotation(tag_levels = 'A')
 ggplot2::ggsave(
-    filename = "results/figures/figure4.pdf",
-    plot = figure4,
-    width = 17.4, height = 18, units = "cm",
+    "results/figures/figure5.pdf",
+    figure5,
+    units = "cm",
+    width = 17.4,
+    height = 15,
     device = cairo_pdf
-)
-ggplot2::ggsave(
-    filename = "results/figures/figure4.png",
-    plot = figure4,
-    width = 17.4, height = 18, units = "cm",
-    dpi = 600
 )
 ```
 
@@ -2363,7 +2562,8 @@ figureS1.panelA <- data.frame(
     ggplot2::labs(
         x = "GENCODE",
         y = "Novel cfRNA + GENCODE",
-        fill = 'Density'
+        fill = 'Density',
+        title = "Quantification correlation"
     ) +
     ggplot2::scale_x_continuous(expand = c(0,0)) +
     ggplot2::scale_y_continuous(expand = c(0,0)) +
@@ -2405,7 +2605,11 @@ figureS1.panelB <- SummarizedExperiment::colData(novel_se) %>%
     ) %>%
     ggplot2::ggplot(ggplot2::aes(x = condition_code, y = age, fill = condition_code)) +
     ggplot2::geom_boxplot(outlier.size = 0.5) +
-    ggplot2::labs(x = "Sample Condition", y = "Patient age") +
+    ggplot2::labs(
+        x = "Sample Condition",
+        y = "Patient age",
+        title = "Sample ages"
+    ) +
     theme_cell() +
     ggplot2::scale_fill_manual(values = c(
         'CT' = '#666666',
@@ -2435,7 +2639,11 @@ figureS1.panelC <- readr::read_csv(
     dplyr::filter(aa_length > 50) %>%
     ggplot2::ggplot(ggplot2::aes(x = aa_length)) +
     ggplot2::geom_histogram(bins = 50, fill = "#2C9DEF") +
-    ggplot2::labs(x = "Predicted ORF length (aa)", y = "Count") +
+    ggplot2::labs(
+        x = "Predicted ORF length (aa)",
+        y = "Count",
+        title = "Novel cfRNA encoded ORFs"
+    ) +
     theme_cell() +
     ggplot2::lims(x=c(50,250)) +
     ggplot2::theme(legend.position = "none") +
@@ -2480,7 +2688,12 @@ figureS1.panelD <- readr::read_tsv(
         'Novel cfRNA' = '#2C9DEF',
         'GENCODE' = '#666666'
     ), guide = ggplot2::guide_legend(override.aes = list(shape = 15, size = 6, alpha = 1))) +
-    ggplot2::labs(x = "PhastCons score", y = "ECDF", color = "Transcriptome") +
+    ggplot2::labs(
+        x = "PhastCons score",
+        y = "ECDF",
+        color = "Transcriptome",
+        title = "Novel cfRNA conservation"
+    ) +
     ggplot2::theme(legend.key.spacing.y = ggplot2::unit(-0.14, "cm"))
 ggplot2::ggsave(
     'results/panels/figureS1_panelD.pdf', figureS1.panelD,
@@ -2499,8 +2712,17 @@ figureS1.panelE <- magick::image_read_pdf('results/panels/figureS1_panelE.pdf', 
         magick::image_crop(geometry='2700x1350', gravity = 'NorthWest') %>%
         grid::rasterGrob() %>%
         ggplotify::as.ggplot() +
-        theme_cell() +
-        ggplot2::theme_void()
+        ggplot2::theme_void() +
+        ggplot2::labs(title = "Supporting reads for an example novel transcript") +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(
+                size = 6, color = "#282A36", face = 'bold',
+                hjust = 0.5, vjust = 1.2
+            ),
+            plot.tag = ggplot2::element_text(
+                size = 10, color = "#282A36", face = 'bold'
+            )
+        )
 ```
 
 ## Figure S1
