@@ -696,7 +696,16 @@ fig2.panelAB <- lapply(list("BE", "EA"), function(numer) {
             ),
             breaks = names(barretts_palette)
         ) +
-        ggplot2::labs(x="Log2FoldChange", y="-Log10 padj", color = "Gene biotype") +
+        ggplot2::labs(
+            x = "Log2FoldChange",
+            y = "-Log10 padj",
+            color = "Gene biotype",
+            title = ifelse(
+                numer == "BE",
+                "Control vs Barrett's Esophagus\n",
+                "Control vs Esophageal Adenocarcinoma\n"
+            )
+        ) +
         theme_cell() +
         ggplot2::guides(color = ggplot2::guide_legend(
             override.aes = list(
@@ -1182,7 +1191,7 @@ fig3.panelA <- novel_se %>%
     ggplot2::labs(
         x = "Number of samples with expression",
         y = "Number of novel isoforms",
-        title = "Common expression of novel cfRNAs"
+        title = "Recurrent expression of novel cfRNAs"
     ) +
     theme_cell() +
     ggplot2::scale_y_continuous(expand = c(0,0))
